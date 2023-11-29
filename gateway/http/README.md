@@ -175,7 +175,7 @@ type HandlerFunc func(ResponseWriter, *Request)
 
 UML diagram as follows
 
-```
+```dot
 @startuml
 !theme blueprint
 class http {
@@ -264,7 +264,7 @@ type muxEntry struct {
 
 UML diagram as follows
 
-```
+```dot
 @startuml
 !theme blueprint
 class http {
@@ -362,7 +362,7 @@ Handler refers to the response corresponding to the respective pattern.
 
 UML diagram as follows
 
-```
+```dot
 @startuml
 !theme blueprint
 class http.HandleFunc {
@@ -473,7 +473,7 @@ func (mux *ServeMux) Handle(pattern string, handler Handler) {
 
 UML diagram as follows
 
-```
+```dot
 @startuml
 !theme blueprint
 
@@ -599,7 +599,7 @@ type Server struct {
 
 UML diagram as follows
 
-```
+```dot
 @startuml
 !theme blueprint
 
@@ -694,7 +694,7 @@ type Header map[string][]string
 
 UML diagram as follows
 
-```
+```dot
 @startuml
 !theme blueprint
 
@@ -792,7 +792,7 @@ func (srv *Server) ListenAndServe() error {
 
 UML diagram as follows
 
-```
+```dot
 @startuml
 !theme blueprint
 
@@ -880,7 +880,7 @@ The **onceCloseListener** should be used to prevent TCP connections in the conne
 
 UML diagram as follows
 
-```
+```dot
 @startuml
 !theme blueprint
 class Server {
@@ -954,7 +954,7 @@ type Conn interface {
 
 UML diagram as follows
 
-````
+````dot
 @startuml
 !theme blueprint
 class Server {
@@ -1009,7 +1009,7 @@ Based on what was previously written
 
 UML diagram as follows
 
-```
+```dot
 @startuml
 !theme blueprint
 class Server {
@@ -1073,7 +1073,7 @@ func (srv *Server) Serve(l net.Listener) error {
 
 UML diagram as follows
 
-```
+```dot
 @startuml
 !theme blueprint
 class Server {
@@ -1128,7 +1128,7 @@ func (srv *Server) Serve(l net.Listener) error {
 
 UML diagram as follows
 
-```
+```dot
 @startuml
 !theme blueprint
 class Server {
@@ -1192,7 +1192,7 @@ func (srv *Server) newConn(rwc net.Conn) *conn {
 
 UML diagram as follows
 
-```
+```dot
 @startuml
 !theme blueprint
 class Server {
@@ -1326,7 +1326,7 @@ type TCPListener struct {
 
 UML diagram as follows
 
-```
+```dot
 @startuml
 !theme blueprint
 class http.ListenAndServe {
@@ -1440,7 +1440,7 @@ func (c *conn) Read(b []byte) (int, error) {
 
 UML diagram as follows
 
-```
+```dot
 @startuml
 !theme blueprint
 interface Listener {
@@ -1602,7 +1602,7 @@ If there is no ongoing activity, they are subsequently moved to idleConn, awaiti
 
 UML diagram as follows
 
-```
+```dot
 @startuml
 !theme blueprint
 class Client {
@@ -1936,7 +1936,7 @@ func (c *Client) do(req *Request) (retres *Response, reterr error) {
 
 UML diagram as follows
 
-```
+```dot
 @startuml
 !theme blueprint
 class Client {
@@ -2026,7 +2026,7 @@ type RoundTripper interface {
 	RoundTrip(*Request) (*Response, error)
 }
 
-👇RoundTrip // (net/http/transport.go)
+👇 RoundTrip // (net/http/transport.go)
 
 type Transport struct {
 ... ...
@@ -2041,7 +2041,7 @@ func (t *Transport) roundTrip(req *Request) (*Response, error) {
 
 UML diagram as follows
 
-```
+```dot
 @startuml
 
 class Client {
@@ -2158,7 +2158,7 @@ func (t *Transport) roundTrip(req *Request) (*Response, error) {
 
 UML diagram as follows
 
-```
+```dot
 @startuml
 !theme blueprint
 interface RoundTripper {
@@ -2232,7 +2232,7 @@ type persistConn struct {
 
 UML diagram as follows
 
-```
+```dot
 @startuml
 !theme blueprint
 class Transport {
@@ -2288,7 +2288,7 @@ func (t *Transport) getConn(treq *transportRequest, cm connectMethod) (pc *persi
 
 UML diagram as follows
 
-```
+```dot
 @startuml
 !theme blueprint
 participant wantConn
@@ -2349,7 +2349,7 @@ type wantConn struct {
 
 UML diagram as follows
 
-```
+```dot
 @startuml
 !theme blueprint
 class Transport {
@@ -2437,7 +2437,7 @@ func (w *wantConn) waiting() bool {
 
 UML diagram as follows
 
-```
+```dot
 @startuml
 !theme blueprint
 
@@ -2474,6 +2474,10 @@ The last step involves triggering the clearing of the queue by the **waiting fun
 #### two case <-w.ready
 
 Based on what was previously written
+
+The main purpose is to identify the reason for having two occurrences of **case <-w.ready** statements.
+
+(为何出现2次 case <-w.ready？)
 
 ```go
 func (t *Transport) getConn(treq *transportRequest, cm connectMethod) (pc *persistConn, err error) {
@@ -2647,15 +2651,212 @@ func (t *Transport) getConn(treq *transportRequest, cm connectMethod) (pc *persi
 }
 ```
 
+**getConn calls dialConnFor**, which **closing the ready channel**.
+Therefore, the second **case <-w.ready** will be **executed directly**.
+(第 2 个 case <-w.ready 直接执行，因 Channel 关闭)
 
+**Closing a channel** is a means of notifying other programs **not to continue waiting**, as shown below: (通知其他程式不用等待)
 
+close channel 是，如下所示
 
+```go
+package main
 
+import (
+	"fmt"
+	"time"
+)
 
+func main() {
+	ready := make(chan struct{})
 
+	go func() {
+		// time.Sleep(2 * time.Second)
+		close(ready)
+	}()
 
+	select {
+	case <-ready:
+		fmt.Println("The channel is closed. Do something.")
+	case <-time.After(5 * time.Second):
+		fmt.Println("Timeout. Do something else.")
+	}
+}
+```
 
+UML diagram as follows
 
+```
+@startuml
+!theme blueprint
+class Transport {
+  - getConn(treq: transportRequest, cm: connectMethod): (pc: persistConn, err: error)
+  - dialConnFor(w: wantConn)
+  - queueForDial(w: wantConn)
+}
+
+Transport::getConn --> Transport::queueForDial
+Transport::queueForDial --> Transport::dialConnFor
+
+class wantConn {
+  - mu
+  - pc: persistConn
+  - err: error
+  - tryDeliver(pc: persistConn, err: error): bool
+  - beforeDial()
+  - afterDial()
+}
+
+class persistConn {
+  - alt
+}
+
+Transport --> wantConn
+wantConn --> persistConn
+
+note right of wantConn::tryDeliver
+  tryDeliver closes ready channel
+end note
+@enduml
+```
+
+<img src="../../assets/image-20231122152442630.png" alt="image-20231122152442630" style="zoom:120%;" />
+
+**tryDeliver** closes the ready channel to notify other programs that there is **no need to continue waiting**.
+
+#### persistConn.roundTrip
+
+Here are 2 round trips, with the first round trip dedicated to management and the second round trip for actual connection.(一个为管理，另一个为连线)
+
+```go
+resp, _ := client.Get("http://127.0.0.1:8080/hello")
+
+👉 Get
+
+func (c *Client) Get(url string) (resp *Response, err error) {
+    ... ...
+	return c.Do(req) // ⬅️ 
+}
+
+👉 Do
+
+func (c *Client) Do(req *Request) (*Response, error) {
+	return c.do(req)
+}
+
+👉 do
+
+func (c *Client) do(req *Request) (retres *Response, reterr error) {
+    ... ...
+    if resp, didTimeout, err = c.send(req, deadline); err != nil {
+        ... ...
+    }
+    ... ...
+}
+
+👉 send
+
+func send(ireq *Request, rt RoundTripper, deadline time.Time) (resp *Response, didTimeout func() bool, err error) {
+    ... ...
+    resp, err = rt.RoundTrip(req) // 1️⃣ the first roundTrip ❗
+    ... ...
+}
+
+👉 RoundTripper
+
+type RoundTripper interface {
+	RoundTrip(*Request) (*Response, error)
+}
+
+👇 RoundTripper // (/usr/local/go-1.21.0/src/net/http/transport.go)
+
+type Transport struct {
+    ... ...
+}
+
+👀 Transport.roundTrip
+
+func (t *Transport) roundTrip(req *Request) (*Response, error) {
+    ... ...
+    pconn, err := t.getConn(treq, cm)
+    ... ...
+}
+
+👉 getConn
+
+func (t *Transport) getConn(treq *transportRequest, cm connectMethod) (pc *persistConn, err error) {
+    ... ...
+}
+
+👉 persistConn
+
+type persistConn struct {
+}
+
+👀 persistConn.roundTrip
+
+func (pc *persistConn) roundTrip(req *transportRequest) (resp *Response, err error) {
+    ... ...
+}
+
+🔗 persistConn.roundTrip
+
+transport.go
+➡️ roundTrip
+... ➡️ resp, err = pconn.roundTrip(treq) // ⬅️
+transport_internal_test.go
+➡️ TestTransportPersistConnReadLoopEOF
+... ➡️ _, err = pc.roundTrip(treq)
+
+👉 pconn.roundTrip(treq)
+
+func (t *Transport) roundTrip(req *Request) (*Response, error) {
+	... ...
+	resp, err = pconn.roundTrip(treq) // 2️⃣ the second roundTrip ❗
+	... ...
+}
+```
+
+UML diagram as follows
+
+```dot
+@startuml
+!theme blueprint
+
+class Client {
+    +Get(url: string): Response
+    +Do(req: Request): Response
+    -do(req: Request): Response
+}
+
+class Requestsend
+class Response
+
+interface RoundTripper {
+    +RoundTrip(req: Request): Response
+}
+
+class Transport {
+    -roundTrip(req: Request): Response
+    -getConn(treq: transportRequest, cm: connectMethod): persistConn
+}
+
+class persistConn {
+    -roundTrip(req: transportRequest): Response
+}
+
+Client --> RoundTripper : "uses"
+Client --> Request : "creates"
+Client --> Response : "returns"
+Client --> Transport : "uses"
+Transport --o persistConn : "uses"
+Transport ..|> RoundTripper : "implements"
+@enduml
+```
+
+<img src="../../assets/image-20231128174942382.png" alt="image-20231128174942382" style="zoom:120%;" />
+
+This is the final summary, represented graphically.
 
 
 
