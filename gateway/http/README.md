@@ -2858,6 +2858,91 @@ Transport ..|> RoundTripper : "implements"
 
 This is the final summary, represented graphically.
 
+## Transport Layer
+
+### Introduction
+
+The transport layer is an **end-to-end** protocol responsible for **multiplexing(复用), demultiplexing(分用)** and **error checking(检验)** between two processes.
+
+### Comparison
+
+The two commonly used protocols in the transport layer, UDP and TCP, differ as follows:
+
+| Comparison      | UDP                                                          | TCP                                                     |
+| --------------- | ------------------------------------------------------------ | ------------------------------------------------------- |
+| Header          | 8 Bytes                                                      | 20 Bytes                                                |
+| Requirement     | **No requirement** for both processes to be online simultaneously (不要求同时在线) | **Requires** both processes to be online simultaneously |
+| Reliability     | Unreliable                                                   | Reliable                                                |
+| Delay           | Low                                                          | High                                                    |
+| Suitable for    | Small files                                                  | Large files                                             |
+| Multicast       | Supports one-to-many (支援群播)                              | Only one-to-one, does not support multicast             |
+| Characteristics | Efficient                                                    | Reliable                                                |
+
+## UDP Protocol
+
+### Datagram
+
+**UDP**, originally named **User Datagram Protocol**, sends **the entire message** at once, while TCP sends fragmented messages.
+
+Its functionality is simple;
+it operates on the IP protocol and adds only **three functions: multiplexing, demultiplexing, and error detection**. Communication takes place directly at **the IP layer**.
+(UDP增加分用、复用和错误检查三功能，封包直接和IP层沟通)
+
+<img src="../../assets/image-20231204021936349.png" alt="image-20231204021936349" style="zoom:80%;" /> 
+
+- In the diagram, **4B** represents 4 bytes, where 4 * 8 = 32 bits. (4 Bytes)
+  The source port and destination port together share this space, each allocated 16 bits. (源端口和目的端口各分 16 bits，上图的 16 位)
+- Port numbers refer to ports, which have a size of 16 bytes. With 2^16 = 65536 possible values, the range is from **0 to 65535**.
+- The length of the data packet includes **both the header and the data**. (图中的数据报长度)
+
+### Pseudo Header
+
+Add a **pseudo header of 12 bytes** (伪首部) on top of the original header as parameters for calculating the checksum.
+The pseudo header will not be transmitted. (计算校验合，不会传送出去)
+
+![image-20231204024524735](../../assets/image-20231204024524735.png) 
+
+- The pseudo header is 12 bytes long. (图中的方框)
+
+- **"全0" + "17"** represents the UDP protocol, "0" + "6" represents the TCP protocol, and "0" is included as it is not used. (上图 全0 到 17 中，全 0 是因为用不到，17 代表 UDP)
+- The data length is 8 bytes for the header plus 7 bytes of data, totaling **15 bytes**. (图中的长度 15 为 首部 8 Bytes 加上 数据 7 Bytes)
+
+- The green-colored "0" indicates making all data even in quantity, but the green all 0 will not be transmitted. (资料数量维持偶数，绿色全零不外传)
+
+- Checksum is calculated by adding the pseudo header every 16 bits, and then the complement code(反码) is written into the checksum field.. (校验码为每 16 bytes 相加，求反码后写入 CheckSum)
+- The receiver end adds a pseudo-header, similarly adding every 16 bits together, ensuring that **the sum, when combined with the checksum, results in all 1s**. (伪首部每 16 bits 相加和 Checksum 总合要为1)
+- The checking method of UDP checksum cannot guarantee the data's integrity completely, but it is efficient. (检验码不能保证没问题，但高效)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
