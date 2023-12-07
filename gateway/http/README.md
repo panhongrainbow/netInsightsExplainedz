@@ -2913,27 +2913,164 @@ The pseudo header will not be transmitted. (计算校验合，不会传送出去
 - The receiver end adds a pseudo-header, similarly adding every 16 bits together, ensuring that **the sum, when combined with the checksum, results in all 1s**. (伪首部每 16 bits 相加和 Checksum 总合要为1)
 - The checking method of UDP checksum cannot guarantee the data's integrity completely, but it is efficient. (检验码不能保证没问题，但高效)
 
+### UDP Example
+
+The following is the program code for the UDP Server, and there will be blocking in between.
+
+```go
+package main
+
+import (
+	"fmt"
+	"net"
+)
+
+func main() {
+	// Listen for UDP connections on localhost (127.0.0.1) and port 8080
+	conn, err := net.ListenUDP("udp", &net.UDPAddr{
+		IP:   net.IPv4(127, 0, 0, 1), // IP address
+		Port: 8080,                   // Port number
+	})
+	if err != nil {
+		// Handle error if there is an issue with creating the UDP listener
+		fmt.Println("Error listening:", err)
+		return
+	}
+
+	var data [1024]byte // Buffer to store incoming data
+	// Read data from the UDP connection
+	n, clientAddr, err := conn.ReadFromUDP(data[:]) // Here will encounter a blockage. (阻塞) 🚷
+	if err != nil {
+		// Handle error if there is an issue with reading from the UDP connection
+		fmt.Println("Error reading from UDP:", err)
+		return
+	}
+
+	// Print the received message from the client
+	fmt.Println("Received message from client:", string(data[:n]))
+
+	// Send a response message to the client
+	conn.WriteToUDP([]byte("Received message successfully"), clientAddr)
+}
+```
+
+The following is the program code for the UDP Client.
+
+```go
+package main
+
+import (
+	"fmt"
+	"net"
+)
+
+func main() {
+	// Establish a UDP connection to the specified IP address (127.0.0.1) and port (8080).
+	conn, err := net.DialUDP("udp", nil, &net.UDPAddr{
+		IP:   net.IPv4(127, 0, 0, 1),
+		Port: 8080,
+	})
+	if err != nil {
+		// Handle the error if the connection cannot be established.
+		fmt.Println("Error establishing UDP connection:", err)
+		return
+	}
+
+	data := "hello"
+
+	// Send the "hello" message to the connected UDP server.
+	_, err = conn.Write([]byte(data))
+	if err != nil {
+		// Handle the error if the message cannot be sent.
+		fmt.Println("Error sending data:", err)
+		return
+	}
+
+	// Read the response from the UDP server.
+	result := make([]byte, 1024)
+	length, remoteAddr, err := conn.ReadFromUDP(result)
+	if err != nil {
+		// Handle the error if reading from the server fails.
+		fmt.Println("Error reading data:", err)
+		return
+	}
+
+	// Print the received message and the remote address.
+	fmt.Println("Received message from", remoteAddr, ":", string(result[:length]))
+}
+```
+
+### Explanation
+
+From the examples above, it can be seen that the functions used by the Server and Client are different.
+
+|      Action      |     Server      |    Client     |
+| :--------------: | :-------------: | :-----------: |
+|      State       | **unconnected** | **connected** |
+| Initial Function |    ListenUDP    |    DialUDP    |
+|       Read       |   ReadFromUDP   |  ReadFromUDP  |
+|      Write       |   WriteToUDP    |     Write     |
+
+Why is WriteToUDP() sometimes used, while other times Write() ⁉️ Is this an issue ⁉️ (为何一下用 WriteToUDP() 一下用 Write())
+
+Comparison of states
+
+| Unit   | State           | Explanation                                                  |
+| ------ | --------------- | ------------------------------------------------------------ |
+| Server | **unconnected** | After calling **net.ListenUDP()**, the UDP server creates a net.UDPConn for read/write operations.<br /><br />Because the local binding address is specified only during the listen, it can only **passively** receive messages from the client. (只是被动的接收请求)<br /><br />Therefore, this UDPConn in Golang is of type **unconnected**. (所以叫 **无连线状态**) |
+| Client | **connected**   | The UDP client's connection is created via **net.DialUDP()**.<br /><br />Since the remote server address is specified during this connection creation, this type of connection is called **connected** in Golang. (一开始就指定要和那 Server 连线，所以叫 **有连线状态**) |
+
+#### UDP Server Operation Explanation
+
+Since it starts as **unconnected**, there is no need for a three-way handshake to establish a connection.
+
+When connecting later, the destination IP address must be specified, hence the use of functions related to **specifying IP, such as ReadFromUDP() and WriteToUDP()**.
+
+(Sever 多 Client 连线，之后指定 IP 连线)
 
 
 
+If the Server does **not need** to communicate with the Client again, the **Read() function** can be used to only read new messages without responding.
+
+(Read 也可用)
 
 
 
+For this type of UDPConn, **WriteToUDP() must be used for write operations**, and the address information of the other party needs to be specified.
+
+Writing directly using **Write()** will **not** be received by the client. (Server 不能用 Write() 函式)
+
+(只能用 WriteToUDP())
 
 
 
+Since a UDP Server can connect to multiple Clients, it is necessary to specify the IP from start to finish.
 
 
 
+#### UDP Client Operation Explanation
+
+For this type of connection, reading operations can use **Read() and ReadFromUDP()**. The main difference is that ReadFromUDP() will return the address information of the remote end.
+
+(Read() and ReadFromUDP() 都可使用)
 
 
 
+For writing operations with this type of connection, only Write() can be used. If WriteToUDP() is used, data transmission cannot be completed.
+
+(只能用 Write())
 
 
 
+Since the Client is always connected to one Server, it tends to not specify an IP and connect to the Server.
 
+(都指定 Server 就不用指定 IP)
 
+#### Overall Analysis
 
+For sending data from the **client**, use **Write**; for receiving data, you can use **Read and ReadFromUDP**.
+
+For the **server**, use **WriteToUDP** to send data and **ReadFromUDP** to read data.
 
 
 
